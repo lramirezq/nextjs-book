@@ -109,10 +109,23 @@ src/
 ## Nota didáctica
 
 Para que el proyecto funcione sin instalar nada extra, los datos se guardan en un
-archivo JSON. En una aplicación de producción usarías una base de datos real
-(PostgreSQL, por ejemplo); lo bueno del patrón BFF es que **solo cambiaría el
-interior de `lib/db.ts`** — el resto de la app no se entera. Esa es, justamente,
-la ventaja de aislar la capa de datos.
+almacén **en memoria**. En tu máquina (desarrollo) además se respaldan en un
+archivo `data.json`, de modo que sobreviven a los reinicios. En un hosting
+serverless como Vercel el sistema de archivos es de solo lectura, así que allí
+los datos viven solo en memoria mientras dure la instancia del servidor —
+perfecto para una demo, pero no para datos permanentes.
+
+En una aplicación real usarías una base de datos (PostgreSQL, SQLite, Turso…).
+Lo bueno del patrón BFF es que **solo cambiaría el interior de `lib/db.ts`** — el
+resto de la app no se entera. Esa es, justamente, la ventaja de aislar la capa de
+datos.
+
+## Dónde desplegar
+
+Vercel (el botón de arriba) es la vía más fácil porque son los creadores de
+Next.js, y su plan gratuito basta para este proyecto. Pero **no es la única
+opción**: la app también corre en Netlify, Railway, Render o en tu propio
+servidor con Docker. El capítulo 11 del libro compara estas alternativas.
 
 ## Licencia
 
