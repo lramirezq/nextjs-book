@@ -50,11 +50,13 @@ type Database = {
 
 // ---- Dónde y cómo se guarda ----
 
-// ¿Podemos escribir en disco? No lo asumimos por el entorno: lo COMPROBAMOS.
-// En hostings serverless (Vercel, etc.) el sistema de archivos es de solo
-// lectura y escribir lanza EROFS. La primera escritura que falle desactiva la
-// persistencia para siempre; a partir de ahí todo vive en memoria.
-let canPersist = true;
+// Por defecto, TODO vive en memoria y no se toca el disco en absoluto. Esto
+// garantiza que la app funcione en hostings serverless (Vercel, etc.), donde
+// el sistema de archivos es de solo lectura y escribir lanzaría EROFS.
+//
+// Si quieres que los datos sobrevivan a los reinicios en tu máquina, activa la
+// persistencia a archivo poniendo ENABLE_FILE_PERSISTENCE=true en tu `.env`.
+let canPersist = process.env.ENABLE_FILE_PERSISTENCE === "true";
 const DB_PATH = join(process.cwd(), "data.json");
 
 function emptyDatabase(): Database {
@@ -68,16 +70,17 @@ const globalStore = globalThis as unknown as { __db?: Database };
 function load(): Database {
   if (globalStore.__db) return globalStore.__db;
 
-  // Primera vez: intentamos leer el archivo si existe y es legible.
+  // Solo leemos del disco si la persistencia está activada. Si no, memoria pura.
   let db = emptyDatabase();
-  try {
-    if (existsSync(DB_PATH)) {
-      db = JSON.parse(readFileSync(DB_PATH, "utf8")) as Database;
+  if (canPersist) {
+    try {
+      if (existsSync(DB_PATH)) {
+        db = JSON.parse(readFileSync(DB_PATH, "utf8")) as Database;
+      }
+    } catch {
+      // Archivo inexistente o corrupto: empezamos de cero en lugar de romper.
+      db = emptyDatabase();
     }
-  } catch {
-    // Si el archivo no existe, está corrupto o no se puede leer, empezamos
-    // de cero en lugar de romper.
-    db = emptyDatabase();
   }
   globalStore.__db = db;
   return db;
@@ -87,8 +90,9 @@ function save(db: Database): void {
   // La fuente de verdad siempre es la memoria: esto nunca falla.
   globalStore.__db = db;
 
-  // Intentamos respaldar en disco. Si el sistema de archivos es de solo
-  // lectura (EROFS en serverless), lo desactivamos y seguimos solo en memoria.
+  // Solo tocamos el disco si la persistencia está activada. Si la escritura
+  // falla (p. ej. sistema de archivos de solo lectura), la desactivamos y
+  // seguimos solo en memoria.
   if (!canPersist) return;
   try {
     writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf8");
