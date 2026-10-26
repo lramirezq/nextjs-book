@@ -1,0 +1,19 @@
+# dependencias
+/node_modules
+
+# build de Next.js
+/.next
+/out
+next-env.d.ts
+*.tsbuildinfo
+
+# datos locales (se generan al correr la app)
+/data.json
+
+# variables de entorno
+.env
+.env.local
+
+# sistema
+.DS_Store
+*.log
