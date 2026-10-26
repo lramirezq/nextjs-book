@@ -50,9 +50,11 @@ type Database = {
 
 // ---- Dónde y cómo se guarda ----
 
-// ¿Podemos escribir en disco? Solo en desarrollo. En Vercel (y otros entornos
-// serverless) el sistema de archivos es de solo lectura.
-const CAN_PERSIST = process.env.NODE_ENV !== "production";
+// ¿Podemos escribir en disco? No lo asumimos por el entorno: lo COMPROBAMOS.
+// En hostings serverless (Vercel, etc.) el sistema de archivos es de solo
+// lectura y escribir lanza EROFS. La primera escritura que falle desactiva la
+// persistencia para siempre; a partir de ahí todo vive en memoria.
+let canPersist = true;
 const DB_PATH = join(process.cwd(), "data.json");
 
 function emptyDatabase(): Database {
@@ -66,29 +68,32 @@ const globalStore = globalThis as unknown as { __db?: Database };
 function load(): Database {
   if (globalStore.__db) return globalStore.__db;
 
-  // Primera vez: intentamos leer el archivo (si estamos en desarrollo).
+  // Primera vez: intentamos leer el archivo si existe y es legible.
   let db = emptyDatabase();
-  if (CAN_PERSIST && existsSync(DB_PATH)) {
-    try {
+  try {
+    if (existsSync(DB_PATH)) {
       db = JSON.parse(readFileSync(DB_PATH, "utf8")) as Database;
-    } catch {
-      // Si el archivo está corrupto, empezamos de cero en lugar de romper.
-      db = emptyDatabase();
     }
+  } catch {
+    // Si el archivo no existe, está corrupto o no se puede leer, empezamos
+    // de cero en lugar de romper.
+    db = emptyDatabase();
   }
   globalStore.__db = db;
   return db;
 }
 
 function save(db: Database): void {
+  // La fuente de verdad siempre es la memoria: esto nunca falla.
   globalStore.__db = db;
-  // Solo escribimos a disco en desarrollo; en serverless esto se omite.
-  if (CAN_PERSIST) {
-    try {
-      writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf8");
-    } catch {
-      // Si por cualquier motivo no se puede escribir, seguimos con la memoria.
-    }
+
+  // Intentamos respaldar en disco. Si el sistema de archivos es de solo
+  // lectura (EROFS en serverless), lo desactivamos y seguimos solo en memoria.
+  if (!canPersist) return;
+  try {
+    writeFileSync(DB_PATH, JSON.stringify(db, null, 2), "utf8");
+  } catch {
+    canPersist = false; // no volvemos a intentarlo
   }
 }
 
