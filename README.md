@@ -61,7 +61,7 @@ Abre <http://localhost:3000> y crea una cuenta. ¡Listo!
 Puedes desplegar tu propia copia en segundos. Vercel es gratuito para proyectos
 personales:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/lramirezq/nextjs-book)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Flramirezq%2Fnextjs-book&env=SESSION_SECRET&envDescription=Secreto%20para%20firmar%20la%20cookie%20de%20sesi%C3%B3n%20(genera%20uno%20con%20openssl%20rand%20-hex%2032)&project-name=mis-tareas&repository-name=mis-tareas)
 
 > Tras desplegar, define la variable de entorno `SESSION_SECRET` con un valor
 > propio (genera uno con `openssl rand -hex 32`).
